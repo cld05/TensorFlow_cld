@@ -41,7 +41,3 @@ input_dim_model = (1, 28, 28)   # images are 28x28 with one channel for the colo
 input_dim = 28 * 28               # we will have to treat the data as vectors sometimes, this variable will help us
 # the images which we will classify will deal with numbers from 0 to 9, so 10 classes
 num_output_classes = 10
-
-
-if __main__ == "__main__":
-    tf.app.run()
