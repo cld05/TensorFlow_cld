@@ -1,0 +1,47 @@
+# import packages for Python
+from __future__ import print_function  # import print funciton from future version of python
+import matplotlib.image as mpimg       # import matplotlib.image method
+import matplotlib.pyplot as plt        # import matplotlib.pyplot method
+import numpy as np                     # import numpy, which is a package for scientific computation
+# import os, which allows to use some functionalities of the underlying operative system directly in the python script
+import os
+# import sys, which is a module which gives access to variables used by the interpreter
+import sys
+import time                            # import time, which is a module which provides functions working with time
+
+# from io (module to handle data streams) import ByteIO, which provides higher-level interface to an I/O device
+from io import BytesIO
+# from PIL (module to manipulate different image formats) import Image, which provides functions to load images from files
+from PIL import Image
+
+# import tesorflow, which is the library which we will use to build our convolutional neural network (CNN)
+import tensorflow as tf
+
+# In this piece of code we open the image of the number
+# which we want to predict after that we will have trained
+# the CNN that we are about to build
+img_mysteryNum = Image.open("MysteryNumberD.bmp")  # we use the Image module to open the image
+# we reshape the .bmp matrix which contains the image's pixel into an array
+pix = np.reshape(img_mysteryNum, 784)
+pix2 = [0 for i in range(784)]                     # we create an empty array
+
+for i in range(len(pix)):                          # we create remap the /bmp image into
+    if (pix[i] == True):                           # a black and white scale array.
+        pix2[i] = 1                                # Each element is a pixel (1 = white, 0 = black)
+    elif (pix[i] == False):
+        pix2[i] = 0
+
+# using numpy we convert the pix2 into an numpy array
+pix3 = np.array(pix2)
+# we plot pix3 to be sure that wanted actions have been performed
+print(pix3)
+
+# Let's define the data dimension
+input_dim_model = (1, 28, 28)   # images are 28x28 with one channel for the color
+input_dim = 28 * 28               # we will have to treat the data as vectors sometimes, this variable will help us
+# the images which we will classify will deal with numbers from 0 to 9, so 10 classes
+num_output_classes = 10
+
+
+if __main__ == "__main__":
+    tf.app.run()
