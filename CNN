@@ -17,27 +17,88 @@ from PIL import Image
 # import tesorflow, which is the library which we will use to build our convolutional neural network (CNN)
 import tensorflow as tf
 
-# In this piece of code we open the image of the number
-# which we want to predict after that we will have trained
-# the CNN that we are about to build
-img_mysteryNum = Image.open("MysteryNumberD.bmp")  # we use the Image module to open the image
-# we reshape the .bmp matrix which contains the image's pixel into an array
-pix = np.reshape(img_mysteryNum, 784)
-pix2 = [0 for i in range(784)]                     # we create an empty array
+# The Model
+# hereafter we will create the model which we will use for our CCN
 
-for i in range(len(pix)):                          # we create remap the /bmp image into
-    if (pix[i] == True):                           # a black and white scale array.
-        pix2[i] = 1                                # Each element is a pixel (1 = white, 0 = black)
-    elif (pix[i] == False):
-        pix2[i] = 0
 
-# using numpy we convert the pix2 into an numpy array
-pix3 = np.array(pix2)
-# we plot pix3 to be sure that wanted actions have been performed
-print(pix3)
+def model(feature, labels, mode, nf1, nf2):
+    # Input layer
+    input_img = tf.reshape(feature["x"], [-1, 28, 28, 1])
 
-# Let's define the data dimension
-input_dim_model = (1, 28, 28)   # images are 28x28 with one channel for the color
-input_dim = 28 * 28               # we will have to treat the data as vectors sometimes, this variable will help us
-# the images which we will classify will deal with numbers from 0 to 9, so 10 classes
-num_output_classes = 10
+    # FIrst convolutional layer
+    # This layer applies a first convolution operation to the input image
+    # we use the method con2d from tensorflow.
+    # The method conv2d is used for convolution of 2-dimensional arrays
+    h = tf.layers.conv2d(
+        inputs=input_img,
+        filters=nf1,
+        kernel_size=[5, 5],
+        padding="same",
+        activation=tf.nn.relu)
+
+    # First pooling layer
+    # This layer is used to reduce the dimensionality of the image
+    # We will use the method max_pooling2d which is used for 2-dimensional arrays
+    h = tf.layers.max_pooling2d(
+        inputs=h,
+        pool_side=[2, 2],
+        strides=2)
+
+    # Second convolutional layer
+    # This layer applies a second convolution operation to the input image
+    # we use the method con2d from tensorflow.
+    # The method conv2d is used for convolution of 2-dimensional arrays
+    h = tf.layers.conv2d(inputs=h,
+                         filters=nf2,
+                         kernel_size=[5, 5],
+                         padding="same",
+                         activation=tf.nn.relu)
+
+    # Second pooling layer
+    # This layer is used to reduce the dimensionality of the image
+    # We will use the method max_pooling2d which is used for 2-dimensional arrays
+    h = tf.layers.max_pooling2d(
+        inputs=h,
+        pool_side=[2, 2],
+        strides=2)
+
+    # We need to flatten our convolutioned vector
+    # That is, the input image has gone through several layers
+    # where it has been convolutioned and pooled. However,
+    # the images are still a 2-dimensional array and we need to flatten it
+    # in order to let the neural network (NN) be able to process it
+    # To this purpose we use the method reshape
+    h = tf.reshape(h, [-1, 7 * 7 * nf2])
+
+    # Dense layer
+    # This layer is the one containing the artificial neurons
+    h = tf.layers.dense(inputs=units=1024)
+
+    # Dropout
+    # The Dropout operation is used to reduce the computational
+    # burden of the algorithm and in simple words it defines the
+    # probability with which we discard some random nodes during
+    # the optimization phase, that is, the phase when the gradient
+    # descent algorithm is used in order to find the parameters
+    # which characterize the NN.
+    h = tf.layers.dropout(inputs=h,
+                          training=mode == tf.estimator.ModeKeys.TRAIN)
+
+    # Logits layer
+    # This is the layer which outputs the 10 classes from the NN
+    # this is not yet the final result since we still to convert This
+    # output in probability when we use the algorithm for prediction
+    h = tf.layers.dense(inputs=h,
+                        units=10)
+
+    # The following dictionary is used in order to store our predictions
+    # This dictionary is to be used when we are in 'prediction mode'
+
+        predictions = {
+            "classes": tf.argmax(inputs=h, axis=1),
+            "probabilities": tf.nn.softmax(h, name="softmax_tensor")
+        }
+
+    # Definition of the 'prediction mode' by means of the estimator method in tensor flow
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
