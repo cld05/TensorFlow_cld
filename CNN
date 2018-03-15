@@ -18,13 +18,15 @@ import tensorflow as tf
 
 def model(features, labels, mode):
     # Input layer
+    print("model")
     nf1 = 32
     nf2 = 64
     input_img = tf.reshape(features["x"], [-1, 28, 28, 1])
+    print("input_img")
 
     # FIrst convolutional layer
     # This layer applies a first convolution operation to the input image
-    # we use the method con2d from tensorflow.
+    # we use the method conv2d from tensorflow.
     # The method conv2d is used for convolution of 2-dimensional arrays
     layer1 = tf.layers.conv2d(
         inputs=input_img,
@@ -32,6 +34,7 @@ def model(features, labels, mode):
         kernel_size=[5, 5],
         padding="same",
         activation=tf.nn.relu)
+    print("layer1")
 
     # First pooling layer
     # This layer is used to reduce the dimensionality of the image
@@ -40,7 +43,7 @@ def model(features, labels, mode):
         inputs=layer1,
         pool_size=[2, 2],
         strides=2)
-
+    print("layer2")
     # Second convolutional layer
     # This layer applies a second convolution operation to the input image
     # we use the method con2d from tensorflow.
@@ -50,7 +53,7 @@ def model(features, labels, mode):
                               kernel_size=[5, 5],
                               padding="same",
                               activation=tf.nn.relu)
-
+    print("layer3")
     # Second pooling layer
     # This layer is used to reduce the dimensionality of the image
     # We will use the method max_pooling2d which is used for 2-dimensional arrays
@@ -59,6 +62,8 @@ def model(features, labels, mode):
         pool_size=[2, 2],
         strides=2)
 
+    print("layer4")
+
     # We need to flatten our convolutioned vector
     # That is, the input image has gone through several layers
     # where it has been convolutioned and pooled. However,
@@ -66,10 +71,12 @@ def model(features, labels, mode):
     # in order to let the neural network (NN) be able to process it
     # To this purpose we use the method reshape
     layer5 = tf.reshape(layer4, [-1, 7 * 7 * nf2])
+    print("layer5")
 
     # Dense layer
     # This layer is the one containing the artificial neurons
-    layer6 = tf.layers.dense(inputs=layer5, units=1024)
+    layer6 = tf.layers.dense(inputs=layer5, units=1024, activation=tf.nn.relu)
+    print("layer6")
 
     # Dropout
     # The Dropout operation is used to reduce the computational
@@ -81,14 +88,14 @@ def model(features, labels, mode):
     layer7 = tf.layers.dropout(inputs=layer6,
                                rate=0.4,
                                training=mode == tf.estimator.ModeKeys.TRAIN)
-
+    print("layer7")
     # Logits layer
     # This is the layer which outputs the 10 classes from the NN
     # this is not yet the final result since we still to convert This
     # output in probability when we use the algorithm for prediction
     layer8 = tf.layers.dense(inputs=layer7,
                              units=10)
-
+    print("layer8")
     # The following dictionary is used in order to store our predictions
     # This dictionary is to be used when we are in 'prediction mode'
 
@@ -96,6 +103,7 @@ def model(features, labels, mode):
         "classes": tf.argmax(input=layer8, axis=1),
         "probabilities": tf.nn.softmax(layer8, name="softmax_tensor")
     }
+    print("prediction")
 
     # Definition of the 'prediction mode' by means of the estimator method in tensor flow
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -140,15 +148,16 @@ def main(unused_argv):
     eval_data = mnist.test.images
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
-    # Let us not create the estimator
-    mnist_classifier = tf.estimator.Estimator(model_fn=model, model_dir="~/mnist_connet_model")
+    # Let us now create the estimator
+    mnist_classifier = tf.estimator.Estimator(
+        model_fn=model, model_dir="/Users/claudiopaliotta/TensorFlow_cld/convnet_model")
 
     # The model can take some time to train.
     # We can then create a log function to check that everything is working fine
     # while training
     tensor_to_log = {"probabilities": "softmax_tensor"}
     logging_hook = tf.train.LoggingTensorHook(tensors=tensor_to_log, every_n_iter=50)
-
+    print("hook")
     # Train the model
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
