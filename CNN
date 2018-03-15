@@ -150,7 +150,7 @@ def main(unused_argv):
 
     # Let us now create the estimator
     mnist_classifier = tf.estimator.Estimator(
-        model_fn=model, model_dir="/Users/claudiopaliotta/TensorFlow_cld/convnet_model")
+        model_fn=model, model_dir="/TensorFlow_cld/convnet_model")
 
     # The model can take some time to train.
     # We can then create a log function to check that everything is working fine
