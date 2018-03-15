@@ -102,3 +102,21 @@ def model(feature, labels, mode, nf1, nf2):
     # Definition of the 'prediction mode' by means of the estimator method in tensor flow
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
+
+    # In order to train and evaluate the model, we need to define a loss functions
+    # The loss function will tell how the output of the model is close to the
+    # real values. This is clearly done in training and evaluation mode since
+    # in these two phases we have availabl both the input (the image) and its label
+    # When we are in prediction mode, it will be up to us to see if the output of
+    # the model correponds to the given input.
+
+    onehot_representation = tf.one_hot(indices=tf.cast(labels, tf.int32), depth 10)
+    loss = tf.losses.softmax_cross_entropy(onehot_representation, logits=h)
+
+    # The loss function which we have just defined needs to be optimized for
+    # the training phase
+    if mode == tf.estimator.ModeKeys.TRAIN:
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=-0.001)
+        train_op = optimizer.minimize(loss=loss,
+                                      global_step=tf.train.get_global_step())
+        return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
