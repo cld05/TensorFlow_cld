@@ -120,3 +120,56 @@ def model(feature, labels, mode, nf1, nf2):
         train_op = optimizer.minimize(loss=loss,
                                       global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
+
+    # Evaluation metrics
+    eval_metric_ops = {
+        "accuracy": tf.metrics.accuracy(labels=labels,
+                                        predictions == predictions["classes"])}
+    returntf.estimator.EstimatorSpec(mode=mode,
+                                     loss=loss,
+                                     eval_metric_ops=eval_metric_ops)
+
+    # Let us now create the main function of this code.
+    # In the main we will load our data from the MNIST dataset
+    # We will devide the data into images and labels for the training phase
+    # and in images and lables for the test phase
+
+    def main(unused_argv):
+        mnist = tf.contrib.lear.dataset.load_dataset("mninst")
+        train_data = mnist.train.images
+        train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+        eval_data = mnist.test.images
+        eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+
+    # Let us not create the estimator
+    mnist_classifier = tf.estimator.Estimator(model_fn=model, model_dir="~/mnist_connet_model")
+
+    # The model can take some time to train.
+    # We can then create a log function to check that everything is working fine
+    # while training
+    tensor_to_log = {"probabilities": "softmax_tensor"}
+    logging_hook = tf.train.LoggingTensorHook(tensors=tensor_to_log, every_n_iter=50)
+
+    # Train the model
+    train_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": train_data},
+        y=train_lables,
+        batch_size=100,
+        num_epochs=None,
+        shuffle=True)
+    mnist_classifier.train(input_fn=train_input_fn,
+                           steps=200000,
+                           hooks=[logging_hook])
+
+    # Evaluate the model and print results
+    eval_input_fn = tf.estimator.inputs.numpy_input_fn(
+        x={"x": eval_data},
+        y=eval_labels,
+        num_epochs=1,
+        shuffle=False)
+        eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+        print(eval_results)
+
+
+if __name__ == "__main__":
+    tf.app.run()
