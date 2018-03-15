@@ -9,11 +9,6 @@ import os
 import sys
 import time                            # import time, which is a module which provides functions working with time
 
-# from io (module to handle data streams) import ByteIO, which provides higher-level interface to an I/O device
-from io import BytesIO
-# from PIL (module to manipulate different image formats) import Image, which provides functions to load images from files
-from PIL import Image
-
 # import tesorflow, which is the library which we will use to build our convolutional neural network (CNN)
 import tensorflow as tf
 
@@ -21,15 +16,17 @@ import tensorflow as tf
 # hereafter we will create the model which we will use for our CCN
 
 
-def model(feature, labels, mode, nf1, nf2):
+def model(features, labels, mode):
     # Input layer
-    input_img = tf.reshape(feature["x"], [-1, 28, 28, 1])
+    nf1 = 32
+    nf2 = 64
+    input_img = tf.reshape(features["x"], [-1, 28, 28, 1])
 
     # FIrst convolutional layer
     # This layer applies a first convolution operation to the input image
     # we use the method con2d from tensorflow.
     # The method conv2d is used for convolution of 2-dimensional arrays
-    h = tf.layers.conv2d(
+    layer1 = tf.layers.conv2d(
         inputs=input_img,
         filters=nf1,
         kernel_size=[5, 5],
@@ -39,27 +36,27 @@ def model(feature, labels, mode, nf1, nf2):
     # First pooling layer
     # This layer is used to reduce the dimensionality of the image
     # We will use the method max_pooling2d which is used for 2-dimensional arrays
-    h = tf.layers.max_pooling2d(
-        inputs=h,
-        pool_side=[2, 2],
+    layer2 = tf.layers.max_pooling2d(
+        inputs=layer1,
+        pool_size=[2, 2],
         strides=2)
 
     # Second convolutional layer
     # This layer applies a second convolution operation to the input image
     # we use the method con2d from tensorflow.
     # The method conv2d is used for convolution of 2-dimensional arrays
-    h = tf.layers.conv2d(inputs=h,
-                         filters=nf2,
-                         kernel_size=[5, 5],
-                         padding="same",
-                         activation=tf.nn.relu)
+    layer3 = tf.layers.conv2d(inputs=layer2,
+                              filters=nf2,
+                              kernel_size=[5, 5],
+                              padding="same",
+                              activation=tf.nn.relu)
 
     # Second pooling layer
     # This layer is used to reduce the dimensionality of the image
     # We will use the method max_pooling2d which is used for 2-dimensional arrays
-    h = tf.layers.max_pooling2d(
-        inputs=h,
-        pool_side=[2, 2],
+    layer4 = tf.layers.max_pooling2d(
+        inputs=layer3,
+        pool_size=[2, 2],
         strides=2)
 
     # We need to flatten our convolutioned vector
@@ -68,11 +65,11 @@ def model(feature, labels, mode, nf1, nf2):
     # the images are still a 2-dimensional array and we need to flatten it
     # in order to let the neural network (NN) be able to process it
     # To this purpose we use the method reshape
-    h = tf.reshape(h, [-1, 7 * 7 * nf2])
+    layer5 = tf.reshape(layer4, [-1, 7 * 7 * nf2])
 
     # Dense layer
     # This layer is the one containing the artificial neurons
-    h = tf.layers.dense(inputs=units=1024)
+    layer6 = tf.layers.dense(inputs=layer5, units=1024)
 
     # Dropout
     # The Dropout operation is used to reduce the computational
@@ -81,23 +78,24 @@ def model(feature, labels, mode, nf1, nf2):
     # the optimization phase, that is, the phase when the gradient
     # descent algorithm is used in order to find the parameters
     # which characterize the NN.
-    h = tf.layers.dropout(inputs=h,
-                          training=mode == tf.estimator.ModeKeys.TRAIN)
+    layer7 = tf.layers.dropout(inputs=layer6,
+                               rate=0.4,
+                               training=mode == tf.estimator.ModeKeys.TRAIN)
 
     # Logits layer
     # This is the layer which outputs the 10 classes from the NN
     # this is not yet the final result since we still to convert This
     # output in probability when we use the algorithm for prediction
-    h = tf.layers.dense(inputs=h,
-                        units=10)
+    layer8 = tf.layers.dense(inputs=layer7,
+                             units=10)
 
     # The following dictionary is used in order to store our predictions
     # This dictionary is to be used when we are in 'prediction mode'
 
-        predictions = {
-            "classes": tf.argmax(inputs=h, axis=1),
-            "probabilities": tf.nn.softmax(h, name="softmax_tensor")
-        }
+    predictions = {
+        "classes": tf.argmax(input=layer8, axis=1),
+        "probabilities": tf.nn.softmax(layer8, name="softmax_tensor")
+    }
 
     # Definition of the 'prediction mode' by means of the estimator method in tensor flow
     if mode == tf.estimator.ModeKeys.PREDICT:
@@ -110,13 +108,13 @@ def model(feature, labels, mode, nf1, nf2):
     # When we are in prediction mode, it will be up to us to see if the output of
     # the model correponds to the given input.
 
-    onehot_representation = tf.one_hot(indices=tf.cast(labels, tf.int32), depth 10)
-    loss = tf.losses.softmax_cross_entropy(onehot_representation, logits=h)
+    onehot_representation = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=10)
+    loss = tf.losses.softmax_cross_entropy(onehot_representation, logits=layer8)
 
     # The loss function which we have just defined needs to be optimized for
     # the training phase
     if mode == tf.estimator.ModeKeys.TRAIN:
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=-0.001)
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
         train_op = optimizer.minimize(loss=loss,
                                       global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
@@ -124,7 +122,7 @@ def model(feature, labels, mode, nf1, nf2):
     # Evaluation metrics
     eval_metric_ops = {
         "accuracy": tf.metrics.accuracy(labels=labels,
-                                        predictions == predictions["classes"])}
+                                        predictions=predictions["classes"])}
     returntf.estimator.EstimatorSpec(mode=mode,
                                      loss=loss,
                                      eval_metric_ops=eval_metric_ops)
@@ -134,12 +132,13 @@ def model(feature, labels, mode, nf1, nf2):
     # We will devide the data into images and labels for the training phase
     # and in images and lables for the test phase
 
-    def main(unused_argv):
-        mnist = tf.contrib.lear.dataset.load_dataset("mninst")
-        train_data = mnist.train.images
-        train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-        eval_data = mnist.test.images
-        eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
+
+def main(unused_argv):
+    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+    train_data = mnist.train.images
+    train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
+    eval_data = mnist.test.images
+    eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
     # Let us not create the estimator
     mnist_classifier = tf.estimator.Estimator(model_fn=model, model_dir="~/mnist_connet_model")
@@ -153,12 +152,12 @@ def model(feature, labels, mode, nf1, nf2):
     # Train the model
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
-        y=train_lables,
+        y=train_labels,
         batch_size=100,
         num_epochs=None,
         shuffle=True)
     mnist_classifier.train(input_fn=train_input_fn,
-                           steps=200000,
+                           steps=20000,
                            hooks=[logging_hook])
 
     # Evaluate the model and print results
@@ -167,8 +166,9 @@ def model(feature, labels, mode, nf1, nf2):
         y=eval_labels,
         num_epochs=1,
         shuffle=False)
-        eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
-        print(eval_results)
+
+    eval_results = mnist_classifier.evaluate(input_fn=eval_input_fn)
+    print(eval_results)
 
 
 if __name__ == "__main__":
