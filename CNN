@@ -1,5 +1,7 @@
 # import packages for Python
 from __future__ import print_function  # import print funciton from future version of python
+from __future__ import division
+from __future__ import print_function
 import matplotlib.image as mpimg       # import matplotlib.image method
 import matplotlib.pyplot as plt        # import matplotlib.pyplot method
 import numpy as np                     # import numpy, which is a package for scientific computation
@@ -11,6 +13,7 @@ import time                            # import time, which is a module which pr
 
 # import tesorflow, which is the library which we will use to build our convolutional neural network (CNN)
 import tensorflow as tf
+tf.logging.set_verbosity(tf.logging.INFO)
 
 # The Model
 # hereafter we will create the model which we will use for our CCN
@@ -108,32 +111,25 @@ def model(features, labels, mode):
     # Definition of the 'prediction mode' by means of the estimator method in tensor flow
     if mode == tf.estimator.ModeKeys.PREDICT:
         return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
-
-    # In order to train and evaluate the model, we need to define a loss functions
-    # The loss function will tell how the output of the model is close to the
-    # real values. This is clearly done in training and evaluation mode since
-    # in these two phases we have availabl both the input (the image) and its label
-    # When we are in prediction mode, it will be up to us to see if the output of
-    # the model correponds to the given input.
-
-    onehot_representation = tf.one_hot(indices=tf.cast(labels, tf.int32), depth=10)
-    loss = tf.losses.softmax_cross_entropy(onehot_representation, logits=layer8)
-
-    # The loss function which we have just defined needs to be optimized for
-    # the training phase
+    print("PREDICT")
+    # Calculate Loss (for both TRAIN and EVAL modes)
+    loss = tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=layer8)
+    print("cross entropy")
+    # Configure the Training Op (for TRAIN mode)
     if mode == tf.estimator.ModeKeys.TRAIN:
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=0.001)
-        train_op = optimizer.minimize(loss=loss,
-                                      global_step=tf.train.get_global_step())
+        train_op = optimizer.minimize(
+            loss=loss,
+            global_step=tf.train.get_global_step())
         return tf.estimator.EstimatorSpec(mode=mode, loss=loss, train_op=train_op)
-
+    print("train")
     # Evaluation metrics
     eval_metric_ops = {
         "accuracy": tf.metrics.accuracy(labels=labels,
                                         predictions=predictions["classes"])}
-    returntf.estimator.EstimatorSpec(mode=mode,
-                                     loss=loss,
-                                     eval_metric_ops=eval_metric_ops)
+    return tf.estimator.EstimatorSpec(mode=mode,
+                                      loss=loss,
+                                      eval_metric_ops=eval_metric_ops)
 
     # Let us now create the main function of this code.
     # In the main we will load our data from the MNIST dataset
@@ -142,15 +138,17 @@ def model(features, labels, mode):
 
 
 def main(unused_argv):
+    print("main")
     mnist = tf.contrib.learn.datasets.load_dataset("mnist")
     train_data = mnist.train.images
     train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
     eval_data = mnist.test.images
     eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
 
+    print("classifier")
     # Let us now create the estimator
     mnist_classifier = tf.estimator.Estimator(
-        model_fn=model, model_dir="/Users/claudiopaliotta/Documents/MachineLearning/TensorFlow_cld/convnet_model")
+        model_fn=model, model_dir="/tmp/mnist_convnet_model")
 
     # The model can take some time to train.
     # We can then create a log function to check that everything is working fine
@@ -159,6 +157,7 @@ def main(unused_argv):
     logging_hook = tf.train.LoggingTensorHook(tensors=tensor_to_log, every_n_iter=50)
     print("hook")
     # Train the model
+    # /Users/claudiopaliotta/Documents/MachineLearning/TensorFlow_cld
     train_input_fn = tf.estimator.inputs.numpy_input_fn(
         x={"x": train_data},
         y=train_labels,
